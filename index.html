@@ -380,14 +380,14 @@ const LS_V1 = 'enraizamiento_v1';
 const ETIQ_DEF = { tipo: 'hoja', qrcontent: 'cedula', cols: 4, ancho: 30, alto: 25, gh: 3, gv: 3, mt: 5, ml: 5, qr: 62, rcols: 2, rrows: 7, rpapel: 203, rgh: 3, rgv: 3, rmt: 0, rml: 0 };
 const ROLLO_DEF = { rcols: 2, rrows: 7, rpapel: 203, rgh: 3, rgv: 3, rmt: 0, rml: 0 };
 const MODS = { enr: 'Enraizamiento', cor: 'Corte' };
-const SHEETS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbx_QESBoFTJBibn4ovm59IbAo2e_tuvUEDI_nqytxAx4PPGvqSyasVRdJ48MtcpmfnI8A/exec';
+const SHEETS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbyOY3jm7bRRU3rI48aBc2B9mpcUHVz50KIPBtSV4TtYp2bgJSSbVcp48sBfCQjbZaY2/exec';
 
 let db = {
   mod: 'enr',
   finca: '',
   etiq: Object.assign({}, ETIQ_DEF),
   sheetsUrl: SHEETS_URL_DEFAULT,
-  sheetsAuto: false,
+  sheetsAuto: true,
   enr: { personas: [], registros: [], config: { esquejes: 50, cooldown: 5 } },
   cor: { personas: [], registros: [], config: { cooldown: 5, unidades: ['Malla', 'Canastilla', 'Carro'] } }
 };
