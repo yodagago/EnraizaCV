@@ -1,0 +1,10 @@
+{
+  "name": "EnraizaCV",
+  "short_name": "EnraizaCV",
+  "description": "Registro de bandejas y esquejes de Campo Verde",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f3f7f5",
+  "theme_color": "#0b6b55",
+  "lang": "es"
+}
