@@ -1,0 +1,58 @@
+.compact-row { margin-top: 0; }
+
+.labels-dialog {
+  width: min(1050px, calc(100% - 24px));
+  max-width: none;
+}
+
+.labels-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--label-columns, 3), var(--label-width, 52mm));
+  gap: var(--label-gap, 4mm);
+  justify-content: center;
+  margin: 22px auto;
+}
+
+.label-card {
+  width: var(--label-width, 52mm);
+  height: var(--label-height, 38mm);
+  border: 1px dashed #83948e;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 4mm;
+  background: #fff;
+  overflow: hidden;
+  break-inside: avoid;
+}
+
+.label-card .label-qr { flex: 0 0 auto; display: grid; place-items: center; }
+.label-card .label-qr img, .label-card .label-qr canvas { max-width: 100%; height: auto !important; }
+.label-card .label-copy { min-width: 0; }
+.label-card strong, .label-card span { display: block; }
+.label-card strong { font-size: 12px; line-height: 1.2; overflow-wrap: anywhere; }
+.label-card span { font-size: 10px; line-height: 1.35; margin-top: 3px; color: #42554e; }
+
+@media (max-width: 700px) {
+  .labels-grid { grid-template-columns: 1fr; }
+  .label-card { margin: auto; max-width: 100%; }
+}
+
+@media print {
+  body > *:not(dialog[open]) { display: none !important; }
+  dialog[open] {
+    display: block !important;
+    position: static !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    margin: auto !important;
+    max-width: none !important;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+  .no-print, .dialog-head .icon-button, #printQr { display: none !important; }
+  .labels-grid { margin: 0; justify-content: start; }
+  .label-card { border: 1px solid #d0d0d0; }
+}
