@@ -8,7 +8,9 @@
   <title>EnraizaCV</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="labels.css">
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
@@ -87,8 +89,9 @@
             <button class="primary wide" type="submit">Guardar persona</button>
           </form>
           <div class="divider"><span>carga masiva</span></div>
-          <label class="file-button">Importar personas desde CSV<input id="peopleImport" type="file" accept=".csv,text/csv"></label>
-          <p class="hint">Columnas admitidas: Nombre, Cédula y Código.</p>
+          <label class="file-button">Importar personas desde Excel<input id="peopleImport" type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"></label>
+          <p class="hint">Columnas admitidas: Nombre o Persona, Cédula y Código.</p>
+          <button id="printAllQrButton" class="secondary wide top-gap" type="button">Generar stickers QR</button>
         </article>
         <article class="card section-card">
           <div class="section-title"><h2>Personal registrado</h2><span id="peopleTotal" class="count-chip">0</span></div>
@@ -116,7 +119,7 @@
         <div id="personBars" class="bars empty-state">No hay registros en este periodo.</div>
       </article>
       <article class="card section-card">
-        <div class="section-title"><h2>Historial</h2><button id="exportButton" class="secondary" type="button">Exportar CSV</button></div>
+        <div class="section-title"><h2>Historial</h2><button id="exportButton" class="secondary" type="button">Descargar Excel</button></div>
         <div class="table-wrap">
           <table><thead><tr><th>Fecha</th><th>Persona</th><th>Origen</th><th>Bandejas</th><th>Esquejes</th><th>Estado</th></tr></thead><tbody id="recordsTable"></tbody></table>
         </div>
@@ -147,6 +150,21 @@
           <button id="syncButton" class="primary wide top-gap" type="button">Enviar pendientes</button>
           <p id="syncStatus" class="hint" role="status"></p>
         </article>
+        <article class="card">
+          <h2>Stickers QR</h2>
+          <form id="labelSettingsForm" class="stack-form">
+            <div class="field-row compact-row">
+              <label>Ancho (mm)<input id="labelWidth" type="number" min="25" max="150" required></label>
+              <label>Alto (mm)<input id="labelHeight" type="number" min="25" max="150" required></label>
+            </div>
+            <div class="field-row compact-row">
+              <label>Tamaño QR (px)<input id="labelQrSize" type="number" min="70" max="350" required></label>
+              <label>Columnas<input id="labelColumns" type="number" min="1" max="6" required></label>
+            </div>
+            <label>Separación (mm)<input id="labelGap" type="number" min="0" max="30" required></label>
+            <button class="secondary wide" type="submit">Guardar formato</button>
+          </form>
+        </article>
         <article class="card danger-zone">
           <h2>Datos locales</h2>
           <p class="card-copy">Los registros permanecen guardados en este dispositivo hasta que los exportes o sincronices.</p>
@@ -174,6 +192,13 @@
     <div id="qrCanvas" class="qr-canvas"></div>
     <p id="qrPersonMeta" class="center-text"></p>
     <button id="printQr" class="primary wide" type="button">Imprimir</button>
+  </dialog>
+
+  <dialog id="labelsDialog" class="labels-dialog">
+    <div class="dialog-head no-print"><div><p class="eyebrow">Impresión</p><h2>Stickers QR</h2></div><button id="closeLabels" class="icon-button" type="button" aria-label="Cerrar stickers">×</button></div>
+    <p id="labelsStatus" class="hint no-print"></p>
+    <div id="labelsGrid" class="labels-grid"></div>
+    <button id="printLabels" class="primary wide no-print" type="button">Imprimir stickers</button>
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
