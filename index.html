@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b6b55">
+  <meta name="description" content="Registro local de bandejas y esquejes para Enraizamiento Campo Verde.">
+  <title>EnraizaCV</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand" aria-label="EnraizaCV">
+      <span class="brand-mark" aria-hidden="true">E</span>
+      <div><strong>EnraizaCV</strong><small>Campo Verde</small></div>
+    </div>
+    <div class="top-status">
+      <span id="networkDot" class="status-dot"></span>
+      <span id="networkText">En línea</span>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section id="view-register" class="view active" aria-labelledby="registerTitle">
+      <div class="page-heading">
+        <div><p class="eyebrow" id="todayLabel"></p><h1 id="registerTitle">Registrar bandeja</h1></div>
+        <button id="cameraButton" class="icon-button" type="button" aria-label="Abrir cámara QR">▣</button>
+      </div>
+
+      <div class="register-grid">
+        <article class="card scan-card">
+          <form id="scanForm">
+            <label for="scanCode">Cédula o código del colaborador</label>
+            <div class="scan-row">
+              <input id="scanCode" name="scanCode" inputmode="numeric" autocomplete="off" placeholder="Escanea o escribe el código" required>
+              <button class="primary" type="submit">Registrar</button>
+            </div>
+            <p class="hint">La pistola lectora puede escribir el código y enviar Enter.</p>
+            <div class="field-row">
+              <label>Origen
+                <select id="origin">
+                  <option>Propagación</option>
+                  <option>Yuldama</option>
+                  <option>Breeder</option>
+                  <option>Otro</option>
+                </select>
+              </label>
+              <label>Bandejas
+                <input id="trayCount" type="number" min="1" max="50" value="1">
+              </label>
+            </div>
+          </form>
+          <div id="registerFeedback" class="feedback neutral" role="status" aria-live="polite">
+            <span class="feedback-icon">→</span>
+            <div><strong>Listo para registrar</strong><span>Selecciona el origen y escanea una persona.</span></div>
+          </div>
+        </article>
+
+        <aside class="today-card">
+          <span class="metric-label">Bandejas registradas hoy</span>
+          <strong id="todayTrays">0</strong>
+          <span id="todayCuttings">0 esquejes</span>
+          <div class="mini-line"><span id="todayPeople">0 personas activas</span><span id="pendingCount">0 pendientes</span></div>
+        </aside>
+      </div>
+
+      <article class="card section-card">
+        <div class="section-title"><h2>Últimos registros</h2><button class="text-button" type="button" data-go="summary">Ver resumen</button></div>
+        <div id="recentRecords" class="record-list empty-state">Todavía no hay registros.</div>
+      </article>
+    </section>
+
+    <section id="view-people" class="view" aria-labelledby="peopleTitle">
+      <div class="page-heading"><div><p class="eyebrow">Equipo</p><h1 id="peopleTitle">Personas</h1></div></div>
+      <div class="people-grid">
+        <article class="card">
+          <h2>Nueva persona</h2>
+          <form id="personForm" class="stack-form">
+            <label>Nombre completo<input id="personName" required autocomplete="name" placeholder="Ej. Laura Gómez"></label>
+            <div class="field-row">
+              <label>Cédula<input id="personId" required inputmode="numeric" placeholder="Documento"></label>
+              <label>Código<input id="personCode" required placeholder="Código interno"></label>
+            </div>
+            <button class="primary wide" type="submit">Guardar persona</button>
+          </form>
+          <div class="divider"><span>carga masiva</span></div>
+          <label class="file-button">Importar personas desde CSV<input id="peopleImport" type="file" accept=".csv,text/csv"></label>
+          <p class="hint">Columnas admitidas: Nombre, Cédula y Código.</p>
+        </article>
+        <article class="card section-card">
+          <div class="section-title"><h2>Personal registrado</h2><span id="peopleTotal" class="count-chip">0</span></div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Persona</th><th>Cédula</th><th>Código</th><th></th></tr></thead><tbody id="peopleTable"></tbody></table>
+          </div>
+          <div id="peopleEmpty" class="empty-state">Agrega la primera persona para comenzar.</div>
+        </article>
+      </div>
+    </section>
+
+    <section id="view-summary" class="view" aria-labelledby="summaryTitle">
+      <div class="page-heading">
+        <div><p class="eyebrow">Producción</p><h1 id="summaryTitle">Resumen</h1></div>
+        <select id="summaryPeriod" aria-label="Periodo del resumen"><option value="today">Hoy</option><option value="7">Últimos 7 días</option><option value="30">Últimos 30 días</option><option value="all">Todo</option></select>
+      </div>
+      <div class="metrics-grid">
+        <article class="metric-card"><span>Bandejas</span><strong id="metricTrays">0</strong></article>
+        <article class="metric-card"><span>Esquejes</span><strong id="metricCuttings">0</strong></article>
+        <article class="metric-card"><span>Personas</span><strong id="metricPeople">0</strong></article>
+        <article class="metric-card"><span>Promedio</span><strong id="metricAverage">0</strong><small>bandejas/persona</small></article>
+      </div>
+      <article class="card section-card">
+        <div class="section-title"><h2>Bandejas por persona</h2><span id="goalLabel" class="count-chip">Meta: 5</span></div>
+        <div id="personBars" class="bars empty-state">No hay registros en este periodo.</div>
+      </article>
+      <article class="card section-card">
+        <div class="section-title"><h2>Historial</h2><button id="exportButton" class="secondary" type="button">Exportar CSV</button></div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Fecha</th><th>Persona</th><th>Origen</th><th>Bandejas</th><th>Esquejes</th><th>Estado</th></tr></thead><tbody id="recordsTable"></tbody></table>
+        </div>
+        <div id="recordsEmpty" class="empty-state">No hay registros en este periodo.</div>
+      </article>
+    </section>
+
+    <section id="view-settings" class="view" aria-labelledby="settingsTitle">
+      <div class="page-heading"><div><p class="eyebrow">Aplicación</p><h1 id="settingsTitle">Configuración</h1></div></div>
+      <div class="settings-grid">
+        <article class="card">
+          <h2>Registro</h2>
+          <form id="settingsForm" class="stack-form">
+            <label>Esquejes por bandeja<input id="cuttingsPerTray" type="number" min="1" max="1000" required></label>
+            <label>Espera entre lecturas de la misma persona (segundos)<input id="duplicateSeconds" type="number" min="0" max="300" required></label>
+            <label>Meta diaria de bandejas por persona<input id="dailyGoal" type="number" min="1" max="100" required></label>
+            <button class="primary wide" type="submit">Guardar configuración</button>
+          </form>
+        </article>
+        <article class="card">
+          <h2>Google Sheets</h2>
+          <p class="card-copy">Agrega la URL de una implementación de Google Apps Script para enviar los registros pendientes.</p>
+          <form id="syncForm" class="stack-form">
+            <label>URL del servicio<input id="syncUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec"></label>
+            <label class="switch-row"><input id="autoSync" type="checkbox"><span>Enviar automáticamente cuando haya internet</span></label>
+            <button class="secondary wide" type="submit">Guardar conexión</button>
+          </form>
+          <button id="syncButton" class="primary wide top-gap" type="button">Enviar pendientes</button>
+          <p id="syncStatus" class="hint" role="status"></p>
+        </article>
+        <article class="card danger-zone">
+          <h2>Datos locales</h2>
+          <p class="card-copy">Los registros permanecen guardados en este dispositivo hasta que los exportes o sincronices.</p>
+          <button id="clearRecordsButton" class="danger" type="button">Eliminar todos los registros</button>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Navegación principal">
+    <button class="nav-item active" data-view="register"><span>＋</span>Registrar</button>
+    <button class="nav-item" data-view="people"><span>♙</span>Personas</button>
+    <button class="nav-item" data-view="summary"><span>▥</span>Resumen</button>
+    <button class="nav-item" data-view="settings"><span>⚙</span>Ajustes</button>
+  </nav>
+
+  <dialog id="cameraDialog">
+    <div class="dialog-head"><div><p class="eyebrow">Escáner</p><h2>Leer código QR</h2></div><button id="closeCamera" class="icon-button" type="button" aria-label="Cerrar cámara">×</button></div>
+    <div class="camera-frame"><video id="cameraVideo" playsinline muted></video><div class="scan-guide"></div></div>
+    <p id="cameraStatus" class="hint">Apunta la cámara al código del colaborador.</p>
+  </dialog>
+
+  <dialog id="qrDialog">
+    <div class="dialog-head"><div><p class="eyebrow">Credencial</p><h2 id="qrPersonName">Persona</h2></div><button id="closeQr" class="icon-button" type="button" aria-label="Cerrar código QR">×</button></div>
+    <div id="qrCanvas" class="qr-canvas"></div>
+    <p id="qrPersonMeta" class="center-text"></p>
+    <button id="printQr" class="primary wide" type="button">Imprimir</button>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
