@@ -14,3 +14,4 @@ Aplicación web original para registrar bandejas y esquejes en el proceso de enr
 - Sincronización opcional con un servicio de Google Apps Script.
 
 Los datos se guardan en el navegador del dispositivo. Antes de borrar los datos locales, expórtalos o sincronízalos.
+Actualización de publicación.
