@@ -384,11 +384,11 @@ const SHEETS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbyOY3jm7bRRU
 
 let db = {
   mod: 'enr',
-  finca: '',
+  finca: 'Campo Verde',
   etiq: Object.assign({}, ETIQ_DEF),
   sheetsUrl: SHEETS_URL_DEFAULT,
   sheetsAuto: true,
-  enr: { personas: [], registros: [], config: { esquejes: 50, cooldown: 5 } },
+  enr: { personas: [], registros: [], config: { esquejes: 130, cooldown: 1 } },
   cor: { personas: [], registros: [], config: { cooldown: 5, unidades: ['Malla', 'Canastilla', 'Carro'] } }
 };
 
@@ -402,7 +402,7 @@ function normalizar(){
   if(!db.cor) db.cor = { personas:[], registros:[], config:{} };
   db.enr.personas = db.enr.personas||[]; db.enr.registros = db.enr.registros||[];
   db.cor.personas = db.cor.personas||[]; db.cor.registros = db.cor.registros||[];
-  db.enr.config = Object.assign({ esquejes: 50, cooldown: 5 }, db.enr.config||{});
+  db.enr.config = Object.assign({ esquejes: 130, cooldown: 1 }, db.enr.config||{});
   db.cor.config = Object.assign({ cooldown: 5 }, db.cor.config||{});
   let u = db.cor.config.unidades;
   if(!Array.isArray(u) || u.length===0) u = ['Und 1=10','Und 2=8','Und 3=10'];
