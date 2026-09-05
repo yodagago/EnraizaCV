@@ -668,6 +668,7 @@ function imprimirCarnets(){
 
 /* ================= REGISTRO ================= */
 const ultimoScan = {}; // "mod|codigo" -> timestamp
+  let ultimoEscaneoActividad = 0;
 let pendienteCorte = null; // {codigo, origen} mientras el modal está abierto
 
 function mostrarError(codigo){
@@ -685,7 +686,11 @@ function enCooldown(codigo){
   const k = db.mod + '|' + codigo;
   return ultimoScan[k] && (Date.now() - ultimoScan[k]) < cd;
 }
-function marcarScan(codigo){ ultimoScan[db.mod + '|' + codigo] = Date.now(); }
+function marcarScan(codigo){
+  const ahora = Date.now();
+  ultimoScan[db.mod + '|' + codigo] = ahora;
+  ultimoEscaneoActividad = ahora;
+}
 
 function registrar(codigo, origen){
   if(db.mod==='cor'){ registrarCorte(codigo, origen); } else { registrarEnr(codigo, origen); }
@@ -1099,6 +1104,72 @@ function reenviarTodo(){
 function autoEnviar(mod, r){
   if(db.sheetsAuto && db.sheetsUrl){ enviarASheets([{mod, r}], true); }
 }
+
+const LS_REENVIO_HORARIO = 'cultivo_ultimo_reenvio_horario_v1';
+
+function horarioReenvioValido(fecha){
+  const dia = fecha.getDay();
+  const hora = fecha.getHours();
+
+  return dia >= 1 && dia <= 6 && hora >= 8 && hora <= 16;
+}
+
+function claveReenvioHora(fecha){
+  return [
+    fecha.getFullYear(),
+    fecha.getMonth() + 1,
+    fecha.getDate(),
+    fecha.getHours()
+  ].join('-');
+}
+
+async function ejecutarReenvioHorario(){
+  const ahora = new Date();
+
+  // Espera 15 segundos después de la última lectura.
+  if(Date.now() - ultimoEscaneoActividad < 15000){
+    return;
+  }
+
+  if(!horarioReenvioValido(ahora)) return;
+  if(!db.sheetsUrl) return;
+
+  const claveActual = claveReenvioHora(ahora);
+
+  if(localStorage.getItem(LS_REENVIO_HORARIO) === claveActual){
+    return;
+  }
+
+  const lista = [];
+
+  ['enr', 'cor'].forEach(mod=>{
+    db[mod].registros.forEach(r=>{
+      lista.push({mod, r});
+    });
+  });
+
+  if(lista.length === 0) return;
+
+  const enviado = await enviarASheets(lista, true);
+
+  if(enviado){
+    localStorage.setItem(LS_REENVIO_HORARIO, claveActual);
+  }
+}
+
+function iniciarReenvioHorario(){
+  ejecutarReenvioHorario();
+
+  setInterval(()=>{
+    ejecutarReenvioHorario();
+  }, 60 * 1000);
+
+  document.addEventListener('visibilitychange', ()=>{
+    if(!document.hidden){
+      ejecutarReenvioHorario();
+    }
+  });
+}
 function guardarSheets(){
   let url = document.getElementById('cfg-sheets-url').value.trim();
   db.sheetsUrl = url;
@@ -1246,6 +1317,7 @@ function guardarEtiquetas(){
 cargar();
 guardar();
 refrescarUI();
+iniciarReenvioHorario();
 document.getElementById('fecha-hoy').textContent = new Date().toLocaleDateString('es-CO',{weekday:'short', day:'numeric', month:'short'});
 document.getElementById('btn-camara').onclick = toggleCamara;
 document.getElementById('md-ramos').addEventListener('keydown', (e)=>{ if(e.key==='Enter') confirmarCorte(); });
