@@ -8,12 +8,15 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="./styles.css">
-
+<style>
+.sync-bar{max-width:760px;margin:8px auto 0;padding:0 14px;display:flex;gap:8px;align-items:center;justify-content:space-between}.sync-estado,.modo-badge{font-size:11px;padding:5px 9px;border-radius:999px;background:#fff;color:#555;box-shadow:0 1px 2px #0001}.sync-estado.ok{background:#e8f5e9;color:#1b5e20}.sync-estado.error{background:#ffebee;color:#c62828}.sync-estado.cargando{background:#fff8e1;color:#8a5b00}body[data-modo="campo"] #tab-programas,body[data-modo="campo"] #tab-ajustes,body[data-modo="campo"] nav button[data-tab="programas"],body[data-modo="campo"] nav button[data-tab="ajustes"]{display:none!important}body[data-modo="campo"] nav button{flex:1}
+</style>
 </head>
 <body>
 <header>
   <div class="header-fila"><div><h1>🌱 Programa de Enraizamiento</h1><div class="subhead">Control de siembra por semana</div></div><span class="fecha" id="fechaHoy"></span></div>
 </header>
+<div class="sync-bar"><span class="modo-badge" id="modoBadge">Modo administrador</span><span class="sync-estado cargando" id="syncEstado">Conectando…</span></div>
 
 <section class="tab activa" id="tab-programas">
   <div class="card">
@@ -24,11 +27,11 @@
       <button class="btn-p">Seleccionar Excel</button>
       <input id="excelInput" type="file" accept=".xlsx,.xls,.csv" hidden onchange="importarExcel(event)">
     </div>
-    <div class="help">Si el archivo contiene “SEMANA 35”, “SEMANA 36”, etc., se identifica automáticamente. Si no, la app te pedirá el número de semana.</div>
-    <div class="fila-botones"><button class="btn-s" onclick="cargarDemo()">🧪 Cargar demo Semana 36</button><button class="btn-n" onclick="exportarBackup()">💾 Copia JSON</button></div>
+    <div class="help">El programa se guarda en Google Sheets. Si la semana ya existe, la app evita cargarla otra vez para no duplicar líneas.</div>
+    <div class="fila-botones"><button class="btn-n" onclick="exportarBackup()">💾 Copia local JSON</button><button class="btn-s" onclick="syncRemote(true)">🔄 Actualizar</button></div>
   </div>
   <div class="card"><h2>Programas guardados</h2><div id="listaProgramas"></div></div>
-  <div class="card"><div class="nota"><b>Primera versión:</b> los datos quedan guardados en este navegador/dispositivo. Para trabajo compartido entre varios celulares, después podemos conectar la misma app con Google Sheets/Apps Script.</div></div>
+  <div class="card"><div class="nota"><b>Base central:</b> los programas y movimientos se sincronizan con Google Sheets. La copia del navegador se mantiene como respaldo temporal.</div></div>
 </section>
 
 <section class="tab" id="tab-registro">
@@ -42,14 +45,14 @@
     <h2>Resumen semanal</h2>
     <select id="selSemanaResumen" onchange="renderResumen()"></select>
     <div id="kpisResumen" class="kpis" style="margin-top:10px"></div>
-    <div class="fila-botones"><button class="btn-p" onclick="exportarExcel()">📤 Exportar Excel</button></div>
+    <div class="fila-botones"><button class="btn-p" onclick="exportarExcel()">📤 Descargar programa Excel</button><button class="btn-s" onclick="syncRemote(true)">🔄 Actualizar</button></div>
   </div>
   <div class="card"><h2>Detalle por variedad</h2><div id="tablaResumen" class="tabla-wrap"></div></div>
 </section>
 
 <section class="tab" id="tab-ajustes">
   <div class="card"><h2>Regla de control</h2><div class="nota">El tope se controla por <b>camas programadas</b>. La suma de siembras, generaciones diferentes, sustituciones y cancelaciones de una línea no puede superar sus camas programadas. Cuando llega al 100%, la línea queda cerrada para nuevos registros.</div></div>
-  <div class="card"><h2>Datos</h2><div class="fila-botones"><button class="btn-s" onclick="document.getElementById('backupInput').click()">📂 Restaurar JSON</button><input id="backupInput" type="file" accept=".json" hidden onchange="restaurarBackup(event)"><button class="btn-d" onclick="borrarTodo()">🗑️ Borrar todo</button></div></div>
+  <div class="card"><h2>Cálculo automático</h2><div class="nota"><b>1 cama = 4.160 esquejes.</b> Esquejes reales = (camas × 4.160) − faltantes. En una cancelación, los esquejes reales quedan en 0.</div></div>
 </section>
 
 <nav>
@@ -66,7 +69,7 @@
     <label>Tipo de movimiento</label><select id="movTipo" onchange="tipoCambio()"><option value="siembra">Siembra normal</option><option value="generacion">Generación diferente</option><option value="sustitucion">Sustitución</option><option value="cancelacion">Cancelación</option></select>
     <div class="fila"><div><label>Clon / generación recibida</label><input id="movClon" placeholder="Ej: BAG4, CG4, BAG3"></div><div id="grupoSust"><label>Sustituye por</label><input id="movSust" placeholder="Ej: Shine-BG4"></div></div>
     <div class="fila"><div><label>Fecha real de siembra</label><input id="movFecha" type="date"></div><div><label>Camas</label><input id="movCamas" type="number" min="0" step="0.001" inputmode="decimal" placeholder="Ej: 1.25" oninput="validarCamasLive()"></div></div>
-    <div class="fila"><div><label>Esquejes reales</label><input id="movEsquejes" type="number" min="0" step="1" inputmode="numeric" placeholder="Ej: 4030"></div><div><label>Faltantes</label><input id="movFaltantes" type="number" min="0" step="1" inputmode="numeric" placeholder="Ej: 130"></div></div>
+    <div class="fila"><div><label>Esquejes reales</label><input id="movEsquejes" type="number" min="0" step="1" inputmode="numeric" readonly></div><div><label>Faltantes</label><input id="movFaltantes" type="number" min="0" step="1" inputmode="numeric" placeholder="Ej: 130"></div></div>
     <div class="fila"><div><label>Bloque</label><input id="movBloque" placeholder="Ej: 4"></div><div><label>Cama(s)</label><input id="movCama" placeholder="Ej: 30-32, 34"></div></div>
     <label>Observación</label><textarea id="movObs" placeholder="Ej: Generación diferente, faltantes, novedad del material…"></textarea>
     <div class="alerta error" id="movError"></div><div class="alerta info" id="movInfo"></div>
@@ -77,5 +80,6 @@
 <div id="toast"></div>
 <script src="./core.js"></script>
 <script src="./app.js"></script>
+<script src="./remote.js"></script>
 </body>
 </html>
