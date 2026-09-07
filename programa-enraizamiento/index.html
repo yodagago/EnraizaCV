@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#2e7d32">
+<title>Programa de Enraizamiento</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="./styles.css">
+
+</head>
+<body>
+<header>
+  <div class="header-fila"><div><h1>🌱 Programa de Enraizamiento</h1><div class="subhead">Control de siembra por semana</div></div><span class="fecha" id="fechaHoy"></span></div>
+</header>
+
+<section class="tab activa" id="tab-programas">
+  <div class="card">
+    <h2>Cargar programa semanal</h2>
+    <div class="import-box" onclick="document.getElementById('excelInput').click()">
+      <div class="big">📥</div><b>Subir archivo de Excel</b>
+      <p>La app busca automáticamente columnas como Variedad, Camas Prog. y Esquejes Prog.</p>
+      <button class="btn-p">Seleccionar Excel</button>
+      <input id="excelInput" type="file" accept=".xlsx,.xls,.csv" hidden onchange="importarExcel(event)">
+    </div>
+    <div class="help">Si el archivo contiene “SEMANA 35”, “SEMANA 36”, etc., se identifica automáticamente. Si no, la app te pedirá el número de semana.</div>
+    <div class="fila-botones"><button class="btn-s" onclick="cargarDemo()">🧪 Cargar demo Semana 36</button><button class="btn-n" onclick="exportarBackup()">💾 Copia JSON</button></div>
+  </div>
+  <div class="card"><h2>Programas guardados</h2><div id="listaProgramas"></div></div>
+  <div class="card"><div class="nota"><b>Primera versión:</b> los datos quedan guardados en este navegador/dispositivo. Para trabajo compartido entre varios celulares, después podemos conectar la misma app con Google Sheets/Apps Script.</div></div>
+</section>
+
+<section class="tab" id="tab-registro">
+  <div class="toolbar"><select id="selSemana" onchange="cambiarSemanaRegistro()"></select><input id="buscar" placeholder="Buscar variedad…" oninput="renderRegistro()"></div>
+  <div id="kpisRegistro" class="kpis"></div>
+  <div id="listaItems"></div>
+</section>
+
+<section class="tab" id="tab-resumen">
+  <div class="card">
+    <h2>Resumen semanal</h2>
+    <select id="selSemanaResumen" onchange="renderResumen()"></select>
+    <div id="kpisResumen" class="kpis" style="margin-top:10px"></div>
+    <div class="fila-botones"><button class="btn-p" onclick="exportarExcel()">📤 Exportar Excel</button></div>
+  </div>
+  <div class="card"><h2>Detalle por variedad</h2><div id="tablaResumen" class="tabla-wrap"></div></div>
+</section>
+
+<section class="tab" id="tab-ajustes">
+  <div class="card"><h2>Regla de control</h2><div class="nota">El tope se controla por <b>camas programadas</b>. La suma de siembras, generaciones diferentes, sustituciones y cancelaciones de una línea no puede superar sus camas programadas. Cuando llega al 100%, la línea queda cerrada para nuevos registros.</div></div>
+  <div class="card"><h2>Datos</h2><div class="fila-botones"><button class="btn-s" onclick="document.getElementById('backupInput').click()">📂 Restaurar JSON</button><input id="backupInput" type="file" accept=".json" hidden onchange="restaurarBackup(event)"><button class="btn-d" onclick="borrarTodo()">🗑️ Borrar todo</button></div></div>
+</section>
+
+<nav>
+  <button class="activa" data-tab="programas" onclick="nav('programas',this)"><span class="ico">📁</span>Programas</button>
+  <button data-tab="registro" onclick="nav('registro',this)"><span class="ico">✍️</span>Registro</button>
+  <button data-tab="resumen" onclick="nav('resumen',this)"><span class="ico">📊</span>Resumen</button>
+  <button data-tab="ajustes" onclick="nav('ajustes',this)"><span class="ico">⚙️</span>Ajustes</button>
+</nav>
+
+<div class="modal-fondo" id="modalMov" onclick="cerrarSiFondo(event)">
+  <div class="modal">
+    <div class="modal-head"><div><h2 id="modalTitulo">Registrar movimiento</h2><div class="help" id="modalSub"></div></div><button class="cerrar" onclick="cerrarModal()">✕</button></div>
+    <div class="resumen-plan" id="modalPlan"></div>
+    <label>Tipo de movimiento</label><select id="movTipo" onchange="tipoCambio()"><option value="siembra">Siembra normal</option><option value="generacion">Generación diferente</option><option value="sustitucion">Sustitución</option><option value="cancelacion">Cancelación</option></select>
+    <div class="fila"><div><label>Clon / generación recibida</label><input id="movClon" placeholder="Ej: BAG4, CG4, BAG3"></div><div id="grupoSust"><label>Sustituye por</label><input id="movSust" placeholder="Ej: Shine-BG4"></div></div>
+    <div class="fila"><div><label>Fecha real de siembra</label><input id="movFecha" type="date"></div><div><label>Camas</label><input id="movCamas" type="number" min="0" step="0.001" inputmode="decimal" placeholder="Ej: 1.25" oninput="validarCamasLive()"></div></div>
+    <div class="fila"><div><label>Esquejes reales</label><input id="movEsquejes" type="number" min="0" step="1" inputmode="numeric" placeholder="Ej: 4030"></div><div><label>Faltantes</label><input id="movFaltantes" type="number" min="0" step="1" inputmode="numeric" placeholder="Ej: 130"></div></div>
+    <div class="fila"><div><label>Bloque</label><input id="movBloque" placeholder="Ej: 4"></div><div><label>Cama(s)</label><input id="movCama" placeholder="Ej: 30-32, 34"></div></div>
+    <label>Observación</label><textarea id="movObs" placeholder="Ej: Generación diferente, faltantes, novedad del material…"></textarea>
+    <div class="alerta error" id="movError"></div><div class="alerta info" id="movInfo"></div>
+    <div class="fila-botones"><button class="btn-n" onclick="cerrarModal()">Cancelar</button><button class="btn-p" onclick="guardarMovimiento()">Guardar</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="./core.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
