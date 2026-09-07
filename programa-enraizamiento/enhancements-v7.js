@@ -1,4 +1,4 @@
-// Fechas v7: usar solo YYYY-MM-DD en la app y en el Excel exportado.
+// Fechas v7: usar solo YYYY-MM-DD en la app y mostrar programado en la vista final.
 (function(){
   function soloFecha(v){
     if(!v)return '';
@@ -38,7 +38,7 @@
     const cont=document.getElementById('vistaProgramaFinal');
     if(cont&&typeof construirVistaPrograma==='function'){
       const filas=construirVistaPrograma(p);
-      cont.innerHTML=`<table><thead><tr><th>#</th><th>Variedad</th><th>Clon recibido</th><th>Fecha siembra</th><th>Camas real</th><th>Esquejes</th><th>Faltantes</th><th>Ubicación</th><th>Novedades</th></tr></thead><tbody>${filas.map((f,idx)=>`<tr class="${f.cancelada?'fila-cancelada':''}"><td>${idx+1}</td><td><b>${esc(f.variedad)}</b></td><td>${esc(f.clon)}</td><td>${esc(soloFecha(f.fechaReal))}</td><td>${f.camasReal===''?'':fc(f.camasReal)}</td><td>${f.esquejesReal===''?'':fmt(f.esquejesReal)}</td><td>${f.faltantes===''?'':fmt(f.faltantes)}</td><td>${esc(f.ubicacion)}</td><td>${esc(f.novedades)}</td></tr>`).join('')}</tbody></table>`;
+      cont.innerHTML=`<table><thead><tr><th>#</th><th>Variedad</th><th>Camas prog.</th><th>Esquejes prog.</th><th>Clon recibido</th><th>Fecha siembra</th><th>Camas real</th><th>Esquejes</th><th>Faltantes</th><th>Ubicación</th><th>Novedades</th></tr></thead><tbody>${filas.map((f,idx)=>`<tr class="${f.cancelada?'fila-cancelada':''}"><td>${idx+1}</td><td><b>${esc(f.variedad)}</b></td><td>${f.camasProg===''?'':fc(f.camasProg)}</td><td>${f.esquejesProg===''?'':fmt(f.esquejesProg)}</td><td>${esc(f.clon)}</td><td>${esc(soloFecha(f.fechaReal))}</td><td>${f.camasReal===''?'':fc(f.camasReal)}</td><td>${f.esquejesReal===''?'':fmt(f.esquejesReal)}</td><td>${f.faltantes===''?'':fmt(f.faltantes)}</td><td>${esc(f.ubicacion)}</td><td>${esc(f.novedades)}</td></tr>`).join('')}</tbody></table>`;
     }
   };
 })();
