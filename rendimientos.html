@@ -253,7 +253,7 @@
 
     table {
       width: 100%;
-      min-width: 980px;
+      min-width: 720px;
       border-collapse: collapse;
     }
 
@@ -491,8 +491,6 @@
               <th>Persona</th>
               <th>Bandejas</th>
               <th>Esquejes</th>
-              <th>Primer escaneo</th>
-              <th>Último escaneo</th>
               <th>Horas disponibles</th>
               <th>Rendimiento</th>
             </tr>
@@ -677,8 +675,6 @@
           </td>
           <td class="numero">${formatoNumero.format(numero(persona.bandejas))}</td>
           <td class="numero">${formatoNumero.format(numero(persona.esquejes))}</td>
-          <td class="numero">${escapar(persona.primerEscaneo || "—")}</td>
-          <td class="numero">${escapar(persona.ultimoEscaneo || "—")}</td>
           <td>${plantillaInput(persona)}</td>
           <td>${plantillaRendimiento(persona)}</td>
         </tr>
@@ -696,8 +692,6 @@
           <div class="tarjeta-datos">
             <div class="dato"><span>Bandejas</span><strong>${formatoNumero.format(numero(persona.bandejas))}</strong></div>
             <div class="dato"><span>Esquejes</span><strong>${formatoNumero.format(numero(persona.esquejes))}</strong></div>
-            <div class="dato"><span>Primer escaneo</span><strong>${escapar(persona.primerEscaneo || "—")}</strong></div>
-            <div class="dato"><span>Último escaneo</span><strong>${escapar(persona.ultimoEscaneo || "—")}</strong></div>
           </div>
           <div class="tarjeta-edicion">
             <div><label>Horas disponibles</label>${plantillaInput(persona)}</div>
