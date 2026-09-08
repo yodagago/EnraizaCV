@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1b5e20">
+  <title>Rendimiento de Enraizamiento</title>
+  <style>
+    :root {
+      --verde: #2e7d32;
+      --verde-oscuro: #1b5e20;
+      --verde-suave: #e8f5e9;
+      --verde-borde: #b7d9ba;
+      --fondo: #f3f6f3;
+      --texto: #172018;
+      --texto-secundario: #657067;
+      --blanco: #ffffff;
+      --borde: #dde5de;
+      --amarillo: #f9a825;
+      --rojo: #c62828;
+      --sombra: 0 8px 24px rgba(23, 60, 27, .08);
+      --radio: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { color-scheme: light; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--fondo);
+      color: var(--texto);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-size: 16px;
+    }
+
+    button, input { font: inherit; }
+
+    button { cursor: pointer; }
+
+    .cabecera {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      color: var(--blanco);
+      background: var(--verde);
+      box-shadow: 0 3px 14px rgba(0, 0, 0, .16);
+    }
+
+    .cabecera-contenido {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .marca {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      min-width: 0;
+    }
+
+    .marca-icono {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .16);
+      font-size: 24px;
+    }
+
+    .marca h1 {
+      margin: 0;
+      font-size: 1.08rem;
+      line-height: 1.2;
+    }
+
+    .marca p {
+      margin: 3px 0 0;
+      opacity: .82;
+      font-size: .8rem;
+    }
+
+    .acciones-cabecera {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .estado-vivo {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 10px;
+      border: 1px solid rgba(255, 255, 255, .25);
+      border-radius: 999px;
+      background: rgba(0, 0, 0, .1);
+      font-size: .78rem;
+      white-space: nowrap;
+    }
+
+    .estado-vivo::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #8df19a;
+      box-shadow: 0 0 0 4px rgba(141, 241, 154, .16);
+    }
+
+    .enlace-app {
+      min-height: 38px;
+      padding: 8px 12px;
+      border: 1px solid rgba(255, 255, 255, .25);
+      border-radius: 10px;
+      color: var(--blanco);
+      background: transparent;
+      text-decoration: none;
+      font-size: .85rem;
+      font-weight: 650;
+    }
+
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 22px 20px 110px;
+    }
+
+    .panel {
+      background: var(--blanco);
+      border: 1px solid var(--borde);
+      border-radius: var(--radio);
+      box-shadow: var(--sombra);
+    }
+
+    .controles {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: minmax(150px, 190px) minmax(220px, 1fr) minmax(190px, 240px) auto auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--texto-secundario);
+      font-size: .82rem;
+      font-weight: 650;
+    }
+
+    input {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+      border: 1.5px solid #cfd8d0;
+      border-radius: 10px;
+      color: var(--texto);
+      background: var(--blanco);
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--verde);
+      box-shadow: 0 0 0 3px rgba(46, 125, 50, .12);
+    }
+
+    .boton {
+      min-height: 44px;
+      padding: 10px 15px;
+      border: 0;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+
+    .boton-principal { background: var(--verde); color: var(--blanco); }
+    .boton-secundario { background: var(--verde-suave); color: var(--verde-oscuro); }
+    .boton:disabled { cursor: default; opacity: .55; }
+
+    .actualizacion {
+      margin: 9px 2px 0;
+      min-height: 20px;
+      color: var(--texto-secundario);
+      font-size: .82rem;
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .kpi {
+      padding: 17px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi::after {
+      content: "";
+      position: absolute;
+      width: 64px;
+      height: 64px;
+      right: -22px;
+      top: -22px;
+      border-radius: 50%;
+      background: var(--verde-suave);
+    }
+
+    .kpi-etiqueta {
+      color: var(--texto-secundario);
+      font-size: .8rem;
+      font-weight: 650;
+    }
+
+    .kpi-valor {
+      margin-top: 5px;
+      color: var(--verde-oscuro);
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      line-height: 1.1;
+      font-weight: 800;
+    }
+
+    .kpi-detalle {
+      margin-top: 5px;
+      color: var(--texto-secundario);
+      font-size: .76rem;
+    }
+
+    .tabla-panel { overflow: hidden; }
+
+    .tabla-titulo {
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--borde);
+    }
+
+    .tabla-titulo h2 { margin: 0; font-size: 1rem; }
+    .tabla-titulo span { color: var(--texto-secundario); font-size: .8rem; }
+
+    .tabla-scroll { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      min-width: 980px;
+      border-collapse: collapse;
+    }
+
+    th {
+      padding: 11px 12px;
+      background: #f8faf8;
+      color: var(--texto-secundario);
+      border-bottom: 1px solid var(--borde);
+      text-align: left;
+      font-size: .76rem;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 11px 12px;
+      border-bottom: 1px solid #edf1ed;
+      vertical-align: middle;
+      font-size: .88rem;
+    }
+
+    tbody tr:hover { background: #fbfdfb; }
+    tbody tr:last-child td { border-bottom: 0; }
+
+    .persona-nombre { font-weight: 720; }
+    .persona-meta { margin-top: 3px; color: var(--texto-secundario); font-size: .74rem; }
+    .numero { font-variant-numeric: tabular-nums; }
+
+    .input-horas {
+      width: 105px;
+      min-height: 38px;
+      padding: 7px 9px;
+      text-align: right;
+      font-weight: 700;
+    }
+
+    .rendimiento {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 4px;
+      padding: 7px 9px;
+      border-radius: 9px;
+      color: var(--verde-oscuro);
+      background: var(--verde-suave);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .rendimiento small { font-size: .68rem; font-weight: 650; }
+
+    .sin-calculo {
+      color: var(--texto-secundario);
+      font-size: .78rem;
+    }
+
+    .movil-lista { display: none; }
+
+    .tarjeta-persona {
+      padding: 15px;
+      border-bottom: 1px solid var(--borde);
+    }
+
+    .tarjeta-persona:last-child { border-bottom: 0; }
+
+    .tarjeta-cabecera {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .tarjeta-datos {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 13px;
+    }
+
+    .dato {
+      padding: 10px;
+      border-radius: 10px;
+      background: #f7faf7;
+    }
+
+    .dato span { display: block; color: var(--texto-secundario); font-size: .72rem; }
+    .dato strong { display: block; margin-top: 3px; font-size: .92rem; }
+    .tarjeta-edicion { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end; }
+
+    .estado-central {
+      padding: 48px 20px;
+      text-align: center;
+      color: var(--texto-secundario);
+    }
+
+    .estado-central strong { display: block; color: var(--texto); margin-bottom: 6px; }
+
+    .barra-guardar {
+      position: fixed;
+      z-index: 18;
+      left: 50%;
+      bottom: 18px;
+      width: min(720px, calc(100% - 28px));
+      transform: translateX(-50%) translateY(130%);
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      color: var(--blanco);
+      background: #173f1a;
+      border-radius: 14px;
+      box-shadow: 0 13px 36px rgba(0, 0, 0, .25);
+      transition: transform .22s ease;
+    }
+
+    .barra-guardar.visible { transform: translateX(-50%) translateY(0); }
+    .barra-guardar span { font-size: .86rem; }
+    .barra-guardar .boton { background: var(--blanco); color: var(--verde-oscuro); }
+
+    #toast {
+      position: fixed;
+      z-index: 150;
+      left: 50%;
+      bottom: 88px;
+      max-width: calc(100% - 28px);
+      padding: 11px 16px;
+      transform: translate(-50%, 20px);
+      border-radius: 999px;
+      color: var(--blanco);
+      background: #263128;
+      box-shadow: var(--sombra);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s, transform .2s;
+      font-size: .86rem;
+      text-align: center;
+    }
+
+    #toast.visible { opacity: 1; transform: translate(-50%, 0); }
+
+    @media (max-width: 920px) {
+      .controles { grid-template-columns: 1fr 1fr; }
+      .campo-busqueda { grid-column: 1 / -1; }
+      .kpis { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 700px) {
+      .cabecera-contenido { padding: 11px 14px; }
+      .marca p, .estado-vivo, .enlace-app { display: none; }
+      main { padding: 14px 12px 110px; }
+      .controles { grid-template-columns: 1fr; padding: 14px; }
+      .campo-busqueda { grid-column: auto; }
+      .kpis { gap: 9px; margin: 12px 0; }
+      .kpi { padding: 14px; }
+      .tabla-scroll { display: none; }
+      .movil-lista { display: block; }
+      .tarjeta-edicion { grid-template-columns: 1fr 1fr; }
+      .barra-guardar { bottom: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="cabecera">
+    <div class="cabecera-contenido">
+      <div class="marca">
+        <div class="marca-icono" aria-hidden="true">📊</div>
+        <div>
+          <h1>🌱 Control de Cultivo</h1>
+          <p>Horas disponibles y rendimientos · Enraizamiento · Campo Verde</p>
+        </div>
+      </div>
+      <div class="acciones-cabecera">
+        <span class="estado-vivo">Actualización automática</span>
+        <a class="enlace-app" href="./">Ir a la aplicación</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel controles" aria-label="Controles del dashboard">
+      <div>
+        <label for="fecha">Fecha de trabajo</label>
+        <input id="fecha" type="date">
+      </div>
+      <div class="campo-busqueda">
+        <label for="buscar">Buscar persona o código</label>
+        <input id="buscar" type="search" placeholder="Escribe para filtrar…">
+      </div>
+      <div>
+        <label for="horas-todos">Horas para todos</label>
+        <input id="horas-todos" type="number" min="0.25" max="24" step="0.25" placeholder="Ej. 7,5">
+      </div>
+      <button class="boton boton-secundario" type="button" id="btn-aplicar">Aplicar</button>
+      <button class="boton boton-principal" type="button" id="btn-actualizar">Actualizar</button>
+    </section>
+
+    <div class="actualizacion" id="actualizacion" aria-live="polite"></div>
+
+    <section class="kpis" aria-label="Indicadores del día">
+      <article class="panel kpi">
+        <div class="kpi-etiqueta">Personas activas</div>
+        <div class="kpi-valor" id="kpi-personas">0</div>
+        <div class="kpi-detalle" id="kpi-personas-detalle">0 con horas</div>
+      </article>
+      <article class="panel kpi">
+        <div class="kpi-etiqueta">Bandejas</div>
+        <div class="kpi-valor" id="kpi-bandejas">0</div>
+        <div class="kpi-detalle">Registradas en la fecha</div>
+      </article>
+      <article class="panel kpi">
+        <div class="kpi-etiqueta">Esquejes</div>
+        <div class="kpi-valor" id="kpi-esquejes">0</div>
+        <div class="kpi-detalle">Producción registrada</div>
+      </article>
+      <article class="panel kpi">
+        <div class="kpi-etiqueta">Rendimiento general</div>
+        <div class="kpi-valor" id="kpi-rendimiento">—</div>
+        <div class="kpi-detalle">Esquejes por hora disponible</div>
+      </article>
+    </section>
+
+    <section class="panel tabla-panel">
+      <div class="tabla-titulo">
+        <h2>Rendimiento por persona</h2>
+        <span id="contador">0 personas</span>
+      </div>
+      <div id="estado" class="estado-central">
+        <strong>Cargando información</strong>
+        Consultando los registros de la semana.
+      </div>
+      <div class="tabla-scroll" id="tabla-contenedor" hidden>
+        <table>
+          <thead>
+            <tr>
+              <th>Persona</th>
+              <th>Bandejas</th>
+              <th>Esquejes</th>
+              <th>Primer escaneo</th>
+              <th>Último escaneo</th>
+              <th>Horas disponibles</th>
+              <th>Rendimiento</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-cuerpo"></tbody>
+        </table>
+      </div>
+      <div class="movil-lista" id="movil-lista" hidden></div>
+    </section>
+  </main>
+
+  <div class="barra-guardar" id="barra-guardar">
+    <span id="cambios-texto">Cambios pendientes</span>
+    <button class="boton" type="button" id="btn-guardar">Guardar horas</button>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbyOY3jm7bRRU3rI48aBc2B9mpcUHVz50KIPBtSV4TtYp2bgJSSbVcp48sBfCQjbZaY2/exec";
+    const INTERVALO_ACTUALIZACION = 20000;
+
+    const estadoApp = {
+      fecha: "",
+      personas: [],
+      cambios: new Set(),
+      actualizando: false,
+      temporizador: null,
+      contadorJsonp: 0
+    };
+
+    const $ = selector => document.querySelector(selector);
+    const formatoNumero = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 1 });
+
+    function fechaLocal(fecha = new Date()) {
+      const anio = fecha.getFullYear();
+      const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+      const dia = String(fecha.getDate()).padStart(2, "0");
+      return `${anio}-${mes}-${dia}`;
+    }
+
+    function escapar(valor) {
+      return String(valor ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function numero(valor) {
+      const convertido = Number(String(valor ?? "").replace(",", "."));
+      return Number.isFinite(convertido) ? convertido : 0;
+    }
+
+    function rendimiento(persona) {
+      const horas = numero(persona.horasDisponibles);
+      return horas > 0 ? numero(persona.esquejes) / horas : null;
+    }
+
+    function solicitarJsonp(parametros) {
+      return new Promise((resolver, rechazar) => {
+        const callback = `__dashboardRendimientos_${Date.now()}_${estadoApp.contadorJsonp++}`;
+        const script = document.createElement("script");
+        const limite = window.setTimeout(() => {
+          limpiar();
+          rechazar(new Error("La consulta tardó demasiado tiempo."));
+        }, 15000);
+
+        function limpiar() {
+          window.clearTimeout(limite);
+          delete window[callback];
+          script.remove();
+        }
+
+        window[callback] = datos => {
+          limpiar();
+          resolver(datos);
+        };
+
+        const consulta = new URLSearchParams({
+          ...parametros,
+          callback,
+          _: String(Date.now())
+        });
+
+        script.onerror = () => {
+          limpiar();
+          rechazar(new Error("No fue posible conectar con Google Sheets."));
+        };
+        script.src = `${API_URL}?${consulta.toString()}`;
+        document.head.appendChild(script);
+      });
+    }
+
+    async function cargarDatos(mostrarCarga = true) {
+      if (estadoApp.actualizando || estadoApp.cambios.size > 0) return;
+
+      estadoApp.actualizando = true;
+      $("#btn-actualizar").disabled = true;
+
+      if (mostrarCarga) {
+        $("#estado").hidden = false;
+        $("#estado").innerHTML = "<strong>Cargando información</strong>Consultando los registros de la semana.";
+        $("#tabla-contenedor").hidden = true;
+        $("#movil-lista").hidden = true;
+      }
+
+      try {
+        const datos = await solicitarJsonp({
+          accion: "dashboard_jefe",
+          fecha: estadoApp.fecha
+        });
+
+        if (!datos || datos.ok !== true) {
+          throw new Error(datos && datos.error ? datos.error : "Respuesta inválida del servidor.");
+        }
+
+        estadoApp.personas = Array.isArray(datos.personas) ? datos.personas : [];
+        renderizar();
+        $("#actualizacion").textContent = `Actualizado: ${datos.actualizado} · ${datos.hoja} · actualización automática cada 20 segundos`;
+      } catch (error) {
+        $("#estado").hidden = false;
+        $("#tabla-contenedor").hidden = true;
+        $("#movil-lista").hidden = true;
+        $("#estado").innerHTML = `<strong>No fue posible cargar el resumen</strong>${escapar(error.message)}`;
+
+      } finally {
+        estadoApp.actualizando = false;
+        $("#btn-actualizar").disabled = false;
+      }
+    }
+
+    function personasFiltradas() {
+      const texto = $("#buscar").value.trim().toLowerCase();
+      if (!texto) return estadoApp.personas;
+
+      return estadoApp.personas.filter(persona =>
+        [persona.persona, persona.codigo]
+          .some(valor => String(valor || "").toLowerCase().includes(texto))
+      );
+    }
+
+    function contenidoRendimiento(persona) {
+      const valor = rendimiento(persona);
+      return valor === null
+        ? '<span class="sin-calculo">Ingresa las horas</span>'
+        : `<span class="rendimiento">${formatoNumero.format(valor)} <small>esq/h</small></span>`;
+    }
+
+    function plantillaRendimiento(persona) {
+      return `<span data-rendimiento="${escapar(persona.codigo)}">${contenidoRendimiento(persona)}</span>`;
+    }
+
+    function plantillaInput(persona) {
+      const valor = persona.horasDisponibles === "" || persona.horasDisponibles === null
+        ? ""
+        : persona.horasDisponibles;
+
+      return `<input class="input-horas" type="number" min="0" max="24" step="0.25" inputmode="decimal" value="${escapar(valor)}" data-codigo="${escapar(persona.codigo)}" aria-label="Horas disponibles de ${escapar(persona.persona)}">`;
+    }
+
+    function renderizar() {
+      const personas = personasFiltradas();
+
+      if (estadoApp.personas.length === 0) {
+        $("#estado").hidden = false;
+        $("#estado").innerHTML = "<strong>No hay registros para esta fecha</strong>Cuando se registren bandejas, aparecerán aquí automáticamente.";
+        $("#tabla-contenedor").hidden = true;
+        $("#movil-lista").hidden = true;
+      } else {
+        $("#estado").hidden = true;
+        $("#tabla-contenedor").hidden = false;
+        $("#movil-lista").hidden = false;
+      }
+
+      $("#tabla-cuerpo").innerHTML = personas.map(persona => `
+        <tr>
+          <td>
+            <div class="persona-nombre">${escapar(persona.persona)}</div>
+            <div class="persona-meta">Código ${escapar(persona.codigo)}</div>
+          </td>
+          <td class="numero">${formatoNumero.format(numero(persona.bandejas))}</td>
+          <td class="numero">${formatoNumero.format(numero(persona.esquejes))}</td>
+          <td class="numero">${escapar(persona.primerEscaneo || "—")}</td>
+          <td class="numero">${escapar(persona.ultimoEscaneo || "—")}</td>
+          <td>${plantillaInput(persona)}</td>
+          <td>${plantillaRendimiento(persona)}</td>
+        </tr>
+      `).join("");
+
+      $("#movil-lista").innerHTML = personas.map(persona => `
+        <article class="tarjeta-persona">
+          <div class="tarjeta-cabecera">
+            <div>
+              <div class="persona-nombre">${escapar(persona.persona)}</div>
+              <div class="persona-meta">Código ${escapar(persona.codigo)}</div>
+            </div>
+            ${plantillaRendimiento(persona)}
+          </div>
+          <div class="tarjeta-datos">
+            <div class="dato"><span>Bandejas</span><strong>${formatoNumero.format(numero(persona.bandejas))}</strong></div>
+            <div class="dato"><span>Esquejes</span><strong>${formatoNumero.format(numero(persona.esquejes))}</strong></div>
+            <div class="dato"><span>Primer escaneo</span><strong>${escapar(persona.primerEscaneo || "—")}</strong></div>
+            <div class="dato"><span>Último escaneo</span><strong>${escapar(persona.ultimoEscaneo || "—")}</strong></div>
+          </div>
+          <div class="tarjeta-edicion">
+            <div><label>Horas disponibles</label>${plantillaInput(persona)}</div>
+            <div><label>Rendimiento</label>${plantillaRendimiento(persona)}</div>
+          </div>
+        </article>
+      `).join("");
+
+      $("#contador").textContent = `${personas.length} de ${estadoApp.personas.length} personas`;
+      actualizarKpis();
+      actualizarBarraGuardar();
+    }
+
+    function actualizarKpis() {
+      const totales = estadoApp.personas.reduce((acumulado, persona) => {
+        acumulado.bandejas += numero(persona.bandejas);
+        acumulado.esquejes += numero(persona.esquejes);
+        const horas = numero(persona.horasDisponibles);
+        if (horas > 0) {
+          acumulado.horas += horas;
+          acumulado.esquejesConHoras += numero(persona.esquejes);
+          acumulado.conHoras += 1;
+        }
+        return acumulado;
+      }, { bandejas: 0, esquejes: 0, horas: 0, esquejesConHoras: 0, conHoras: 0 });
+
+      $("#kpi-personas").textContent = formatoNumero.format(estadoApp.personas.length);
+      $("#kpi-personas-detalle").textContent = `${totales.conHoras} con horas`;
+      $("#kpi-bandejas").textContent = formatoNumero.format(totales.bandejas);
+      $("#kpi-esquejes").textContent = formatoNumero.format(totales.esquejes);
+      $("#kpi-rendimiento").textContent = totales.horas > 0
+        ? `${formatoNumero.format(totales.esquejesConHoras / totales.horas)} esq/h`
+        : "—";
+    }
+
+    function editarHoras(codigo, valor) {
+      const persona = estadoApp.personas.find(item => String(item.codigo) === String(codigo));
+      if (!persona) return;
+
+      const limpio = String(valor).trim().replace(",", ".");
+      persona.horasDisponibles = limpio === "" ? "" : numero(limpio);
+      estadoApp.cambios.add(String(codigo));
+
+      document.querySelectorAll("[data-rendimiento]").forEach(elemento => {
+        if (String(elemento.dataset.rendimiento) === String(codigo)) {
+          elemento.innerHTML = contenidoRendimiento(persona);
+        }
+      });
+
+      document.querySelectorAll("[data-codigo]").forEach(input => {
+        if (
+          input !== document.activeElement &&
+          String(input.dataset.codigo) === String(codigo)
+        ) {
+          input.value = persona.horasDisponibles;
+        }
+      });
+
+      actualizarKpis();
+      actualizarBarraGuardar();
+    }
+
+    function manejarEntradaHoras(evento) {
+      const input = evento.target.closest("[data-codigo]");
+      if (!input) return;
+      editarHoras(input.dataset.codigo, input.value);
+    }
+
+    function aplicarHorasTodos() {
+      const horas = numero($("#horas-todos").value);
+      if (horas <= 0 || horas > 24) {
+        mostrarToast("Ingresa una cantidad de horas válida.");
+        return;
+      }
+
+      estadoApp.personas.forEach(persona => {
+        persona.horasDisponibles = horas;
+        estadoApp.cambios.add(String(persona.codigo));
+      });
+      renderizar();
+      mostrarToast("Horas aplicadas. Revisa las excepciones antes de guardar.");
+    }
+
+    function actualizarBarraGuardar() {
+      const cantidad = estadoApp.cambios.size;
+      $("#barra-guardar").classList.toggle("visible", cantidad > 0);
+      $("#cambios-texto").textContent = cantidad === 1
+        ? "1 persona con cambios"
+        : `${cantidad} personas con cambios`;
+    }
+
+    async function guardarHoras() {
+      if (estadoApp.cambios.size === 0) return;
+
+      const boton = $("#btn-guardar");
+      boton.disabled = true;
+      boton.textContent = "Guardando…";
+
+      const horas = estadoApp.personas
+        .filter(persona => estadoApp.cambios.has(String(persona.codigo)))
+        .map(persona => ({
+          codigo: persona.codigo,
+          persona: persona.persona,
+          horasDisponibles: persona.horasDisponibles
+        }));
+
+      try {
+        await fetch(API_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            accion: "guardar_horas_jefe",
+            fecha: estadoApp.fecha,
+            horas
+          })
+        });
+
+        estadoApp.cambios.clear();
+        actualizarBarraGuardar();
+        mostrarToast("Horas enviadas a Google Sheets.");
+        window.setTimeout(() => cargarDatos(false), 1400);
+      } catch (error) {
+        mostrarToast("No fue posible guardar. Revisa la conexión.");
+      } finally {
+        boton.disabled = false;
+        boton.textContent = "Guardar horas";
+      }
+    }
+
+    function mostrarToast(mensaje) {
+      const toast = $("#toast");
+      toast.textContent = mensaje;
+      toast.classList.add("visible");
+      window.clearTimeout(mostrarToast.temporizador);
+      mostrarToast.temporizador = window.setTimeout(
+        () => toast.classList.remove("visible"),
+        2600
+      );
+    }
+
+    function programarActualizacion() {
+      window.clearInterval(estadoApp.temporizador);
+      estadoApp.temporizador = window.setInterval(() => {
+        if (!document.hidden && estadoApp.cambios.size === 0) {
+          cargarDatos(false);
+        }
+      }, INTERVALO_ACTUALIZACION);
+    }
+
+    $("#fecha").addEventListener("change", () => {
+      if (estadoApp.cambios.size > 0 && !confirm("Hay horas sin guardar. ¿Cambiar de fecha y descartarlas?")) {
+        $("#fecha").value = estadoApp.fecha;
+        return;
+      }
+      estadoApp.cambios.clear();
+      estadoApp.fecha = $("#fecha").value;
+      cargarDatos(true);
+    });
+
+    $("#buscar").addEventListener("input", renderizar);
+    $("#btn-aplicar").addEventListener("click", aplicarHorasTodos);
+    $("#btn-actualizar").addEventListener("click", () => cargarDatos(true));
+    $("#btn-guardar").addEventListener("click", guardarHoras);
+    $("#tabla-cuerpo").addEventListener("input", manejarEntradaHoras);
+    $("#movil-lista").addEventListener("input", manejarEntradaHoras);
+
+    estadoApp.fecha = fechaLocal();
+    $("#fecha").value = estadoApp.fecha;
+    programarActualizacion();
+
+    cargarDatos(true);
+  </script>
+</body>
+</html>
