@@ -182,6 +182,17 @@
 
     .boton-principal { background: var(--verde); color: var(--blanco); }
     .boton-secundario { background: var(--verde-suave); color: var(--verde-oscuro); }
+    .boton-excluir {
+      min-height: 36px;
+      padding: 7px 10px;
+      border: 1px solid #ffcdd2;
+      border-radius: 9px;
+      color: var(--rojo);
+      background: #ffebee;
+      font-size: .78rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
     .boton:disabled { cursor: default; opacity: .55; }
 
     .actualizacion {
@@ -253,7 +264,7 @@
 
     table {
       width: 100%;
-      min-width: 720px;
+      min-width: 820px;
       border-collapse: collapse;
     }
 
@@ -341,6 +352,7 @@
     .dato span { display: block; color: var(--texto-secundario); font-size: .72rem; }
     .dato strong { display: block; margin-top: 3px; font-size: .92rem; }
     .tarjeta-edicion { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end; }
+    .tarjeta-acciones { margin-top: 10px; text-align: right; }
 
     .estado-central {
       padding: 48px 20px;
@@ -493,6 +505,7 @@
               <th>Esquejes</th>
               <th>Horas disponibles</th>
               <th>Rendimiento</th>
+              <th>Acción</th>
             </tr>
           </thead>
           <tbody id="tabla-cuerpo"></tbody>
@@ -677,6 +690,7 @@
           <td class="numero">${formatoNumero.format(numero(persona.esquejes))}</td>
           <td>${plantillaInput(persona)}</td>
           <td>${plantillaRendimiento(persona)}</td>
+          <td><button class="boton-excluir" type="button" data-excluir="${escapar(persona.codigo)}">Eliminar</button></td>
         </tr>
       `).join("");
 
@@ -696,6 +710,9 @@
           <div class="tarjeta-edicion">
             <div><label>Horas disponibles</label>${plantillaInput(persona)}</div>
             <div><label>Rendimiento</label>${plantillaRendimiento(persona)}</div>
+          </div>
+          <div class="tarjeta-acciones">
+            <button class="boton-excluir" type="button" data-excluir="${escapar(persona.codigo)}">Eliminar del día</button>
           </div>
         </article>
       `).join("");
@@ -795,7 +812,9 @@
         .map(persona => ({
           codigo: persona.codigo,
           persona: persona.persona,
-          horasDisponibles: persona.horasDisponibles
+          horasDisponibles: persona.horasDisponibles,
+          bandejas: numero(persona.bandejas),
+          esquejes: numero(persona.esquejes)
         }));
 
       try {
@@ -820,6 +839,58 @@
         boton.disabled = false;
         boton.textContent = "Guardar horas";
       }
+    }
+
+    async function excluirPersona(codigo) {
+      const persona = estadoApp.personas.find(
+        item => String(item.codigo) === String(codigo)
+      );
+
+      if (!persona) return;
+
+      const confirmar = confirm(
+        `¿Eliminar a ${persona.persona} del rendimiento de ${estadoApp.fecha}? ` +
+        "Sus escaneos y registros originales no se borrarán."
+      );
+
+      if (!confirmar) return;
+
+      document.querySelectorAll("[data-excluir]").forEach(boton => {
+        if (String(boton.dataset.excluir) === String(codigo)) {
+          boton.disabled = true;
+          boton.textContent = "Guardando…";
+        }
+      });
+
+      try {
+        await fetch(API_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            accion: "eliminar_persona_horas",
+            fecha: estadoApp.fecha,
+            codigo: persona.codigo,
+            persona: persona.persona
+          })
+        });
+
+        estadoApp.cambios.delete(String(codigo));
+        estadoApp.personas = estadoApp.personas.filter(
+          item => String(item.codigo) !== String(codigo)
+        );
+        renderizar();
+        mostrarToast("Persona eliminada del rendimiento de esta fecha.");
+      } catch (error) {
+        renderizar();
+        mostrarToast("No fue posible eliminar la persona. Revisa la conexión.");
+      }
+    }
+
+    function manejarExclusion(evento) {
+      const boton = evento.target.closest("[data-excluir]");
+      if (!boton) return;
+      excluirPersona(boton.dataset.excluir);
     }
 
     function mostrarToast(mensaje) {
@@ -858,6 +929,8 @@
     $("#btn-guardar").addEventListener("click", guardarHoras);
     $("#tabla-cuerpo").addEventListener("input", manejarEntradaHoras);
     $("#movil-lista").addEventListener("input", manejarEntradaHoras);
+    $("#tabla-cuerpo").addEventListener("click", manejarExclusion);
+    $("#movil-lista").addEventListener("click", manejarExclusion);
 
     estadoApp.fecha = fechaLocal();
     $("#fecha").value = estadoApp.fecha;
