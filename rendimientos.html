@@ -438,7 +438,7 @@
         </div>
       </div>
       <div class="acciones-cabecera">
-        <span class="estado-vivo">Actualización automática</span>
+        <span class="estado-vivo" id="estado-conexion">Actualización automática</span>
         <a class="enlace-app" href="./">Ir a la aplicación</a>
       </div>
     </div>
@@ -524,7 +524,10 @@
 
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbyOY3jm7bRRU3rI48aBc2B9mpcUHVz50KIPBtSV4TtYp2bgJSSbVcp48sBfCQjbZaY2/exec";
-    const INTERVALO_ACTUALIZACION = 20000;
+    const INTERVALO_ACTUALIZACION = 60000;
+    const TIEMPO_LIMITE_CONSULTA = 30000;
+    const INTENTOS_CONSULTA = 3;
+    const PREFIJO_CACHE = "rendimientos_cache_";
 
     const estadoApp = {
       fecha: "",
@@ -571,7 +574,7 @@
         const limite = window.setTimeout(() => {
           limpiar();
           rechazar(new Error("La consulta tardó demasiado tiempo."));
-        }, 15000);
+        }, TIEMPO_LIMITE_CONSULTA);
 
         function limpiar() {
           window.clearTimeout(limite);
@@ -594,9 +597,74 @@
           limpiar();
           rechazar(new Error("No fue posible conectar con Google Sheets."));
         };
+        script.async = true;
         script.src = `${API_URL}?${consulta.toString()}`;
         document.head.appendChild(script);
       });
+    }
+
+    function esperar(milisegundos) {
+      return new Promise(resolver => window.setTimeout(resolver, milisegundos));
+    }
+
+    async function consultarDashboard() {
+      let ultimoError = null;
+
+      for (let intento = 1; intento <= INTENTOS_CONSULTA; intento += 1) {
+        try {
+          return await solicitarJsonp({
+            accion: "dashboard_jefe",
+            fecha: estadoApp.fecha
+          });
+        } catch (error) {
+          ultimoError = error;
+
+          if (intento < INTENTOS_CONSULTA) {
+            $("#actualizacion").textContent =
+              `Conexión lenta. Reintentando (${intento}/${INTENTOS_CONSULTA})…`;
+            await esperar(intento * 1500);
+          }
+        }
+      }
+
+      throw ultimoError || new Error("No fue posible conectar con Google Sheets.");
+    }
+
+    function guardarCache(datos) {
+      try {
+        localStorage.setItem(
+          PREFIJO_CACHE + estadoApp.fecha,
+          JSON.stringify({ guardado: Date.now(), datos })
+        );
+      } catch (error) {
+        // La aplicación continúa aunque el navegador no permita caché local.
+      }
+    }
+
+    function leerCache() {
+      try {
+        const texto = localStorage.getItem(PREFIJO_CACHE + estadoApp.fecha);
+        if (!texto) return null;
+        const cache = JSON.parse(texto);
+        return cache && cache.datos ? cache : null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function mostrarCacheDisponible() {
+      const cache = leerCache();
+      if (!cache || !cache.datos || !Array.isArray(cache.datos.personas)) {
+        return false;
+      }
+
+      estadoApp.personas = cache.datos.personas;
+      renderizar();
+      const fechaCache = new Date(cache.guardado).toLocaleString("es-CO");
+      $("#actualizacion").textContent =
+        `Sin conexión · mostrando última información guardada: ${fechaCache}`;
+      $("#estado-conexion").textContent = "Reconectando…";
+      return true;
     }
 
     async function cargarDatos(mostrarCarga = true) {
@@ -605,7 +673,7 @@
       estadoApp.actualizando = true;
       $("#btn-actualizar").disabled = true;
 
-      if (mostrarCarga) {
+      if (mostrarCarga && estadoApp.personas.length === 0) {
         $("#estado").hidden = false;
         $("#estado").innerHTML = "<strong>Cargando información</strong>Consultando los registros de la semana.";
         $("#tabla-contenedor").hidden = true;
@@ -613,23 +681,33 @@
       }
 
       try {
-        const datos = await solicitarJsonp({
-          accion: "dashboard_jefe",
-          fecha: estadoApp.fecha
-        });
+        const datos = await consultarDashboard();
 
         if (!datos || datos.ok !== true) {
           throw new Error(datos && datos.error ? datos.error : "Respuesta inválida del servidor.");
         }
 
         estadoApp.personas = Array.isArray(datos.personas) ? datos.personas : [];
+        guardarCache(datos);
         renderizar();
-        $("#actualizacion").textContent = `Actualizado: ${datos.actualizado} · ${datos.hoja} · actualización automática cada 20 segundos`;
+        $("#actualizacion").textContent = `Actualizado: ${datos.actualizado} · ${datos.hoja} · actualización automática cada 60 segundos`;
+        $("#estado-conexion").textContent = "Actualización automática";
       } catch (error) {
-        $("#estado").hidden = false;
-        $("#tabla-contenedor").hidden = true;
-        $("#movil-lista").hidden = true;
-        $("#estado").innerHTML = `<strong>No fue posible cargar el resumen</strong>${escapar(error.message)}`;
+        const conservaDatos = estadoApp.personas.length > 0 || mostrarCacheDisponible();
+
+        if (conservaDatos) {
+          if (estadoApp.personas.length > 0 && !leerCache()) {
+            $("#actualizacion").textContent =
+              "Conexión intermitente · se conservan los últimos datos visibles.";
+          }
+          $("#estado-conexion").textContent = "Reconectando…";
+        } else {
+          $("#estado").hidden = false;
+          $("#tabla-contenedor").hidden = true;
+          $("#movil-lista").hidden = true;
+          $("#estado").innerHTML = `<strong>No fue posible cargar el resumen</strong>${escapar(error.message)}<br>La aplicación volverá a intentarlo automáticamente.`;
+          $("#estado-conexion").textContent = "Reconectando…";
+        }
 
       } finally {
         estadoApp.actualizando = false;
@@ -931,6 +1009,11 @@
     $("#movil-lista").addEventListener("input", manejarEntradaHoras);
     $("#tabla-cuerpo").addEventListener("click", manejarExclusion);
     $("#movil-lista").addEventListener("click", manejarExclusion);
+    window.addEventListener("online", () => cargarDatos(false));
+    window.addEventListener("offline", () => {
+      $("#estado-conexion").textContent = "Sin conexión";
+      mostrarCacheDisponible();
+    });
 
     estadoApp.fecha = fechaLocal();
     $("#fecha").value = estadoApp.fecha;
