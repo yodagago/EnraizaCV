@@ -125,7 +125,6 @@ td{padding:7px 4px; border-bottom:1px solid #f0f0f0;}
   </div>
   <div class="modulos">
     <button id="mod-enr" onclick="setModulo('enr')">🌱 Enraizamiento</button>
-    <button id="mod-cor" onclick="setModulo('cor')">✂️ Corte</button>
   </div>
 </header>
 
@@ -379,7 +378,7 @@ const LS = 'cultivo_v2';
 const LS_V1 = 'enraizamiento_v1';
 const ETIQ_DEF = { tipo: 'hoja', qrcontent: 'cedula', cols: 4, ancho: 30, alto: 25, gh: 3, gv: 3, mt: 5, ml: 5, qr: 62, rcols: 2, rrows: 7, rpapel: 203, rgh: 3, rgv: 3, rmt: 0, rml: 0 };
 const ROLLO_DEF = { rcols: 2, rrows: 7, rpapel: 203, rgh: 3, rgv: 3, rmt: 0, rml: 0 };
-const MODS = { enr: 'Enraizamiento', cor: 'Corte' };
+const MODS = { enr: 'Enraizamiento' };
 const SHEETS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbyOY3jm7bRRU3rI48aBc2B9mpcUHVz50KIPBtSV4TtYp2bgJSSbVcp48sBfCQjbZaY2/exec';
 
 let db = {
@@ -395,7 +394,7 @@ let db = {
 function M(){ return db[db.mod]; }
 
 function normalizar(){
-  if(!MODS[db.mod]) db.mod = 'enr';
+  db.mod = 'enr';
   if(!db.sheetsUrl) db.sheetsUrl = SHEETS_URL_DEFAULT;
   db.etiq = Object.assign({}, ETIQ_DEF, db.etiq||{});
   if(!db.enr) db.enr = { personas:[], registros:[], config:{} };
@@ -477,7 +476,7 @@ function siguienteCodigoNum(){
 
 /* ================= MÓDULOS Y TABS ================= */
 function setModulo(m){
-  if(db.mod===m) return;
+  if(m!=='enr' || db.mod===m) return;
   db.mod = m;
   guardar();
   cerrarModal();
@@ -487,7 +486,8 @@ function setModulo(m){
 }
 function refrescarUI(){
   document.getElementById('mod-enr').classList.toggle('activa', db.mod==='enr');
-  document.getElementById('mod-cor').classList.toggle('activa', db.mod==='cor');
+  const btnCorte = document.getElementById('mod-cor');
+  if(btnCorte) btnCorte.classList.remove('activa');
   document.getElementById('pers-mod').textContent = '· ' + MODS[db.mod];
   document.getElementById('cfg-mod').textContent = '· ' + MODS[db.mod];
   document.getElementById('cfg-solo-enr').style.display = db.mod==='enr' ? 'block' : 'none';
@@ -1061,9 +1061,7 @@ function registroPayload(mod, r){
 }
 function pendientes(){
   const lista = [];
-  ['enr','cor'].forEach(mod=>{
-    db[mod].registros.forEach(r=>{ if(!r.sent) lista.push({mod, r}); });
-  });
+  db.enr.registros.forEach(r=>{ if(!r.sent) lista.push({mod:'enr', r}); });
   return lista;
 }
 function actualizarPendientes(){
@@ -1097,7 +1095,7 @@ function enviarPendientes(){
 function reenviarTodo(){
   if(!confirm('¿Reenviar TODOS los registros a Google Sheets? No se duplican (el Apps Script ignora repetidos).')) return;
   const lista = [];
-  ['enr','cor'].forEach(mod=>{ db[mod].registros.forEach(r=>lista.push({mod, r})); });
+  db.enr.registros.forEach(r=>lista.push({mod:'enr', r}));
   toast('Reenviando ' + lista.length + '…');
   enviarASheets(lista, false);
 }
@@ -1142,10 +1140,8 @@ async function ejecutarReenvioHorario(){
 
   const lista = [];
 
-  ['enr', 'cor'].forEach(mod=>{
-    db[mod].registros.forEach(r=>{
-      lista.push({mod, r});
-    });
+  db.enr.registros.forEach(r=>{
+    lista.push({mod:'enr', r});
   });
 
   if(lista.length === 0) return;
