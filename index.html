@@ -176,17 +176,19 @@ td{padding:7px 4px; border-bottom:1px solid #f0f0f0;}
     <h2>Agregar persona <span id="pers-mod" style="font-weight:400;"></span></h2>
     <label>Nombre completo</label>
     <input type="text" id="inp-nombre" placeholder="Ej: María González">
-    <label>Cédula / Documento (va en el QR)</label>
+    <label>Cédula principal (va en el QR nuevo)</label>
     <input type="text" id="inp-doc" inputmode="numeric" placeholder="Ej: 100399318">
+    <label>Cédula anterior con cero (opcional)</label>
+    <input type="text" id="inp-alias" inputmode="numeric" placeholder="Ej: 1003993180">
     <input type="hidden" id="inp-codigo">
-    <div style="font-size:12px; color:var(--texto2); margin-top:4px;">El QR lleva la cédula. La lectora la reconoce igual de bien que un número corto.</div>
+    <div style="font-size:12px; color:var(--texto2); margin-top:4px;">La lectora aceptará tanto la cédula principal como la anterior. Todos los registros se guardarán con la persona y la cédula principal.</div>
     <div style="margin-top:12px;">
       <button class="btn-p" onclick="agregarPersona()">＋ Agregar y generar QR</button>
     </div>
     <div style="margin-top:8px;">
       <button class="btn-s" style="width:100%;" onclick="document.getElementById('inp-excel').click()">📥 Cargar personas desde Excel</button>
       <input type="file" id="inp-excel" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importarExcel(event)">
-      <div style="font-size:12px; color:var(--texto2); margin-top:6px;">Columna A: nombre · Columna B: cédula/documento (opcional) · Columna C: código del QR (opcional; si va vacía se asignan números cortos 1, 2, 3…)</div>
+      <div style="font-size:12px; color:var(--texto2); margin-top:6px;"><b>Formato:</b> Columna A: Nombre · Columna B: Cédula principal · Columna C: Cédula con cero (opcional). La tercera columna puede quedar vacía.</div>
     </div>
   </div>
   <div class="card">
@@ -402,6 +404,13 @@ function normalizar(){
   db.enr.personas = db.enr.personas||[]; db.enr.registros = db.enr.registros||[];
   db.cor.personas = db.cor.personas||[]; db.cor.registros = db.cor.registros||[];
   db.enr.config = Object.assign({ esquejes: 130, cooldown: 1 }, db.enr.config||{});
+  db.enr.personas.forEach(p=>{
+    p.codigo = limpiarCodigo(p.codigo);
+    p.doc = limpiarCodigo(p.doc);
+    p.aliases = (Array.isArray(p.aliases) ? p.aliases : [])
+      .map(limpiarCodigo)
+      .filter((v,i,a)=>v && v!==p.codigo && v!==p.doc && a.indexOf(v)===i);
+  });
   db.cor.config = Object.assign({ cooldown: 5 }, db.cor.config||{});
   let u = db.cor.config.unidades;
   if(!Array.isArray(u) || u.length===0) u = ['Und 1=10','Und 2=8','Und 3=10'];
@@ -451,11 +460,20 @@ function toast(msg){
 function fmtHora(ts){ return new Date(ts).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}); }
 function fmtFecha(ts){ return new Date(ts).toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'}); }
 function inicioDia(d){ const x=new Date(d); x.setHours(0,0,0,0); return x.getTime(); }
+function limpiarCodigo(v){
+  return String(v==null ? '' : v).trim().replace(/\.0$/, '');
+}
+function nombreClave(v){
+  return String(v||'').trim().toLocaleUpperCase('es-CO');
+}
+function codigosPersona(p){
+  return [p.codigo, p.doc].concat(Array.isArray(p.aliases) ? p.aliases : [])
+    .map(limpiarCodigo).filter(Boolean);
+}
 function personaPorCodigo(c){
-  const v = String(c==null ? '' : c).trim();
+  const v = limpiarCodigo(c);
   if(!v) return undefined;
-  // reconoce por código corto O por cédula/documento (así funciona escanees lo que escanees)
-  return M().personas.find(p=> p.codigo===v || (p.doc && String(p.doc).trim()===v));
+  return M().personas.find(p=>codigosPersona(p).includes(v));
 }
 function qrTexto(p){
   // qué contenido lleva el QR: cédula (si existe y así está configurado) o el código corto
@@ -516,18 +534,24 @@ function irTab(nombre){
 /* ================= PERSONAS ================= */
 function agregarPersona(){
   const nombre = document.getElementById('inp-nombre').value.trim();
-  const doc = document.getElementById('inp-doc').value.trim();
+  const doc = limpiarCodigo(document.getElementById('inp-doc').value);
+  const alias = limpiarCodigo(document.getElementById('inp-alias').value);
   let codigo = document.getElementById('inp-codigo').value.trim().toUpperCase();
   if(!nombre){ toast('Escribe el nombre'); return; }
+  if(!doc){ toast('Escribe la cédula principal'); return; }
+  if(alias && alias===doc){ toast('La cédula anterior debe ser diferente'); return; }
+  if(M().personas.some(p=>nombreClave(p.nombre)===nombreClave(nombre))){ toast('Esa persona ya existe. Actualízala cargando el Excel.'); return; }
+  if([doc,alias].filter(Boolean).some(v=>personaPorCodigo(v))){ toast('Una de las cédulas ya pertenece a otra persona'); return; }
   if(!codigo) codigo = siguienteCodigoNum();
   if(personaPorCodigo(codigo)){ toast('Ese código ya existe'); return; }
-  M().personas.push({ codigo, nombre, doc, creado: Date.now() });
+  M().personas.push({ codigo, nombre, doc, aliases: alias ? [alias] : [], creado: Date.now() });
   guardar();
   document.getElementById('inp-nombre').value = '';
   document.getElementById('inp-doc').value = '';
+  document.getElementById('inp-alias').value = '';
   document.getElementById('inp-codigo').value = '';
   renderPersonas(); renderSelManual();
-  toast('✓ ' + nombre + ' agregada (código ' + codigo + ')');
+  toast('✓ ' + nombre + ' agregada');
 }
 function eliminarPersona(codigo){
   const p = personaPorCodigo(codigo);
@@ -557,7 +581,8 @@ function renderPersonas(){
     fila.className = 'persona-item';
     const qrDiv = document.createElement('div'); qrDiv.className = 'qr-mini';
     const info = document.createElement('div'); info.className = 'info';
-    info.innerHTML = '<div class="n">'+p.nombre+'</div><div class="c">Cód: '+p.codigo+(p.doc ? ' · CC: '+p.doc : '')+'</div>';
+    const aliasTxt = Array.isArray(p.aliases) && p.aliases.length ? ' · Anterior: '+p.aliases.join(', ') : '';
+    info.innerHTML = '<div class="n">'+p.nombre+'</div><div class="c">Cód: '+p.codigo+(p.doc ? ' · CC: '+p.doc : '')+aliasTxt+'</div>';
     const cop = document.createElement('input');
     cop.type = 'number'; cop.min = '0'; cop.className = 'inp-copias'; cop.inputMode = 'numeric';
     cop.value = (p.copias==null ? 1 : p.copias);
@@ -579,21 +604,55 @@ function importarExcel(ev){
     try{
       const wb = XLSX.read(lector.result, {type:'array'});
       const hoja = wb.Sheets[wb.SheetNames[0]];
-      const filas = XLSX.utils.sheet_to_json(hoja, {header:1, defval:''});
-      let agregadas = 0, omitidas = 0;
+      const filas = XLSX.utils.sheet_to_json(hoja, {header:1, defval:'', raw:false});
+      let agregadas = 0, actualizadas = 0, omitidas = 0;
       filas.forEach(fila=>{
         const nombre = String(fila[0]||'').trim();
-        const doc = String(fila[1]||'').trim();       // Columna B: cédula/documento
-        let codigo = String(fila[2]||'').trim().toUpperCase(); // Columna C: código (opcional)
+        const doc = limpiarCodigo(fila[1]);
+        let alias = limpiarCodigo(fila[2]);
         if(!nombre) return;
-        if(/^(nombre|persona)/i.test(nombre)) return; // fila de encabezado
-        if(!codigo) codigo = siguienteCodigoNum();
-        if(personaPorCodigo(codigo) || M().personas.some(p=>p.nombre.toLowerCase()===nombre.toLowerCase())){ omitidas++; return; }
-        M().personas.push({ codigo, nombre, doc, creado: Date.now() });
-        agregadas++;
+        if(/^(nombre|persona)$/i.test(nombre)) return;
+        if(!doc){ omitidas++; return; }
+        if(alias===doc) alias = '';
+
+        let persona = M().personas.find(p=>nombreClave(p.nombre)===nombreClave(nombre));
+        if(!persona){
+          persona = M().personas.find(p=>{
+            const docs = [p.doc].concat(Array.isArray(p.aliases) ? p.aliases : []).map(limpiarCodigo);
+            return docs.includes(doc) || (alias && docs.includes(alias));
+          });
+        }
+
+        const conflicto = M().personas.find(p=>
+          p!==persona && [doc,alias].filter(Boolean).some(v=>codigosPersona(p).includes(v))
+        );
+        if(conflicto){ omitidas++; return; }
+
+        if(persona){
+          const anterior = limpiarCodigo(persona.doc);
+          const aliases = (Array.isArray(persona.aliases) ? persona.aliases : [])
+            .concat(anterior && anterior!==doc ? [anterior] : [])
+            .concat(alias ? [alias] : [])
+            .map(limpiarCodigo)
+            .filter((v,i,a)=>v && v!==doc && v!==persona.codigo && a.indexOf(v)===i);
+          persona.nombre = nombre;
+          persona.doc = doc;
+          persona.aliases = aliases;
+          actualizadas++;
+        } else {
+          const codigo = siguienteCodigoNum();
+          M().personas.push({
+            codigo,
+            nombre,
+            doc,
+            aliases: alias ? [alias] : [],
+            creado: Date.now()
+          });
+          agregadas++;
+        }
       });
       guardar(); renderPersonas(); renderSelManual();
-      toast('✓ ' + agregadas + ' personas cargadas' + (omitidas ? ' · ' + omitidas + ' repetidas omitidas' : ''));
+      toast('✓ ' + agregadas + ' nuevas · ' + actualizadas + ' actualizadas' + (omitidas ? ' · ' + omitidas + ' omitidas' : ''));
     }catch(e){ toast('No se pudo leer el archivo'); }
   };
   lector.readAsArrayBuffer(f);
