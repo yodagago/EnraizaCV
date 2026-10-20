@@ -176,6 +176,8 @@ td{padding:7px 4px; border-bottom:1px solid #f0f0f0;}
     <h2>Agregar persona <span id="pers-mod" style="font-weight:400;"></span></h2>
     <label>Nombre completo</label>
     <input type="text" id="inp-nombre" placeholder="Ej: María González">
+    <label>Nombre corto para etiqueta (opcional)</label>
+    <input type="text" id="inp-nombre-corto" placeholder="Ej: María González">
     <label>Cédula principal (va en el QR nuevo)</label>
     <input type="text" id="inp-doc" inputmode="numeric" placeholder="Ej: 100399318">
     <label>Cédula anterior con cero (opcional)</label>
@@ -188,7 +190,7 @@ td{padding:7px 4px; border-bottom:1px solid #f0f0f0;}
     <div style="margin-top:8px;">
       <button class="btn-s" style="width:100%;" onclick="document.getElementById('inp-excel').click()">📥 Cargar personas desde Excel</button>
       <input type="file" id="inp-excel" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importarExcel(event)">
-      <div style="font-size:12px; color:var(--texto2); margin-top:6px;"><b>Formato:</b> Columna A: Nombre · Columna B: Cédula principal · Columna C: Cédula con cero (opcional). La tercera columna puede quedar vacía.</div>
+      <div style="font-size:12px; color:var(--texto2); margin-top:6px;"><b>Formato:</b> Columna A: Nombre completo · Columna B: Cédula principal · Columna C: Cédula con cero (opcional) · Columna D: Nombre corto para etiqueta (opcional). Las columnas C y D pueden quedar vacías.</div>
     </div>
   </div>
   <div class="card">
@@ -407,6 +409,7 @@ function normalizar(){
   db.enr.personas.forEach(p=>{
     p.codigo = limpiarCodigo(p.codigo);
     p.doc = limpiarCodigo(p.doc);
+    p.nombreCorto = String(p.nombreCorto||'').trim();
     p.aliases = (Array.isArray(p.aliases) ? p.aliases : [])
       .map(limpiarCodigo)
       .filter((v,i,a)=>v && v!==p.codigo && v!==p.doc && a.indexOf(v)===i);
@@ -534,6 +537,7 @@ function irTab(nombre){
 /* ================= PERSONAS ================= */
 function agregarPersona(){
   const nombre = document.getElementById('inp-nombre').value.trim();
+  const nombreCorto = document.getElementById('inp-nombre-corto').value.trim();
   const doc = limpiarCodigo(document.getElementById('inp-doc').value);
   const alias = limpiarCodigo(document.getElementById('inp-alias').value);
   let codigo = document.getElementById('inp-codigo').value.trim().toUpperCase();
@@ -544,9 +548,10 @@ function agregarPersona(){
   if([doc,alias].filter(Boolean).some(v=>personaPorCodigo(v))){ toast('Una de las cédulas ya pertenece a otra persona'); return; }
   if(!codigo) codigo = siguienteCodigoNum();
   if(personaPorCodigo(codigo)){ toast('Ese código ya existe'); return; }
-  M().personas.push({ codigo, nombre, doc, aliases: alias ? [alias] : [], creado: Date.now() });
+  M().personas.push({ codigo, nombre, nombreCorto, doc, aliases: alias ? [alias] : [], creado: Date.now() });
   guardar();
   document.getElementById('inp-nombre').value = '';
+  document.getElementById('inp-nombre-corto').value = '';
   document.getElementById('inp-doc').value = '';
   document.getElementById('inp-alias').value = '';
   document.getElementById('inp-codigo').value = '';
@@ -582,7 +587,8 @@ function renderPersonas(){
     const qrDiv = document.createElement('div'); qrDiv.className = 'qr-mini';
     const info = document.createElement('div'); info.className = 'info';
     const aliasTxt = Array.isArray(p.aliases) && p.aliases.length ? ' · Anterior: '+p.aliases.join(', ') : '';
-    info.innerHTML = '<div class="n">'+p.nombre+'</div><div class="c">Cód: '+p.codigo+(p.doc ? ' · CC: '+p.doc : '')+aliasTxt+'</div>';
+    const cortoTxt = p.nombreCorto ? '<div class="c">Etiqueta: '+p.nombreCorto+'</div>' : '';
+    info.innerHTML = '<div class="n">'+p.nombre+'</div>'+cortoTxt+'<div class="c">Cód: '+p.codigo+(p.doc ? ' · CC: '+p.doc : '')+aliasTxt+'</div>';
     const cop = document.createElement('input');
     cop.type = 'number'; cop.min = '0'; cop.className = 'inp-copias'; cop.inputMode = 'numeric';
     cop.value = (p.copias==null ? 1 : p.copias);
@@ -610,6 +616,7 @@ function importarExcel(ev){
         const nombre = String(fila[0]||'').trim();
         const doc = limpiarCodigo(fila[1]);
         let alias = limpiarCodigo(fila[2]);
+        const nombreCorto = String(fila[3]||'').trim();
         if(!nombre) return;
         if(/^(nombre|persona)$/i.test(nombre)) return;
         if(!doc){ omitidas++; return; }
@@ -636,6 +643,7 @@ function importarExcel(ev){
             .map(limpiarCodigo)
             .filter((v,i,a)=>v && v!==doc && v!==persona.codigo && a.indexOf(v)===i);
           persona.nombre = nombre;
+          persona.nombreCorto = nombreCorto;
           persona.doc = doc;
           persona.aliases = aliases;
           actualizadas++;
@@ -644,6 +652,7 @@ function importarExcel(ev){
           M().personas.push({
             codigo,
             nombre,
+            nombreCorto,
             doc,
             aliases: alias ? [alias] : [],
             creado: Date.now()
@@ -706,13 +715,13 @@ function imprimirCarnets(){
       const ccTxt = 'Cód ' + p.codigo + (p.doc ? ' · ' + p.doc : '');
       if(rollo){
         const txt = document.createElement('div'); txt.className = 'txt-print';
-        const n = document.createElement('div'); n.className='cn'; n.textContent = p.nombre; txt.appendChild(n);
+        const n = document.createElement('div'); n.className='cn'; n.textContent = p.nombreCorto || p.nombre; txt.appendChild(n);
         const cc = document.createElement('div'); cc.className='cc'; cc.textContent = ccTxt; txt.appendChild(cc);
         c.appendChild(txt);
         if(total % porPagina === 0){ pagina = document.createElement('div'); pagina.className = 'pagina-rollo'; hoja.appendChild(pagina); }
         pagina.appendChild(c);
       } else {
-        const n = document.createElement('div'); n.className='cn'; n.textContent = p.nombre; c.appendChild(n);
+        const n = document.createElement('div'); n.className='cn'; n.textContent = p.nombreCorto || p.nombre; c.appendChild(n);
         const cc = document.createElement('div'); cc.className='cc'; cc.textContent = ccTxt; c.appendChild(cc);
         hoja.appendChild(c);
       }
