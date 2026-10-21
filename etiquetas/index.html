@@ -79,7 +79,9 @@ function load(){
     if(x){
       const old=x.settings||{};
       const migrated=(old.enr||old.mal||old.des)?(old.enr||old.mal||old.des):old;
-      state={...state,...x,data:{...state.data,...(x.data||{})},settings:{...DEF,...migrated}};
+      const oldDefault=Number(migrated.width)===30&&Number(migrated.height)===25&&Number(migrated.qr)===62&&Number(migrated.cols)===2&&Number(migrated.rows)===7&&Number(migrated.paper)===203&&Number(migrated.gx)===3&&Number(migrated.gy)===3&&Number(migrated.mt)===0&&Number(migrated.ml)===0;
+      const appliedSettings=oldDefault?DEF:{...DEF,...migrated};
+      state={...state,...x,data:{...state.data,...(x.data||{})},settings:appliedSettings};
     }
     normalizeUppercase();
     save();
