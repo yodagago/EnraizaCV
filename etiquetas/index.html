@@ -70,7 +70,7 @@
 <script>
 const KEY='centro_etiquetas_v1';
 const MODULES={enr:{name:'Enraizamiento',qr:true},mal:{name:'Mallas',qr:false},des:{name:'Deshierbe',qr:false},var:{name:'Varios x4',qr:false,free:true}};
-const DEF={type:'rollo',width:30,height:25,qr:62,cols:2,rows:7,paper:203,gx:3,gy:3,mt:0,ml:0};
+const DEF={type:'rollo',width:25,height:20,qr:65,cols:4,rows:7,paper:100,gx:11,gy:9,mt:0,ml:1};
 let state={module:'enr',data:{enr:[],mal:[],des:[],var:[]},settings:{...DEF}};
 let selected=new Set();
 function load(){
