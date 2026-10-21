@@ -73,7 +73,18 @@ const MODULES={enr:{name:'Enraizamiento',qr:true},mal:{name:'Mallas',qr:false},d
 const DEF={type:'rollo',width:30,height:25,qr:62,cols:2,rows:7,paper:203,gx:3,gy:3,mt:0,ml:0};
 let state={module:'enr',data:{enr:[],mal:[],des:[],var:[]},settings:{...DEF}};
 let selected=new Set();
-function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x){const old=x.settings||{};const migrated=(old.enr||old.mal||old.des)?(old.enr||old.mal||old.des):old;state={...state,...x,data:{...state.data,...(x.data||{})},settings:{...DEF,...migrated}}normalizeUppercase();save()}catch(e){}}
+function load(){
+  try{
+    const x=JSON.parse(localStorage.getItem(KEY));
+    if(x){
+      const old=x.settings||{};
+      const migrated=(old.enr||old.mal||old.des)?(old.enr||old.mal||old.des):old;
+      state={...state,...x,data:{...state.data,...(x.data||{})},settings:{...DEF,...migrated}};
+    }
+    normalizeUppercase();
+    save();
+  }catch(e){}
+}
 function save(){localStorage.setItem(KEY,JSON.stringify(state))}
 function toast(s){const e=document.getElementById('toast');e.textContent=s;e.classList.add('on');clearTimeout(e.t);e.t=setTimeout(()=>e.classList.remove('on'),2400)}
 function clean(v){return String(v==null?'':v).trim().replace(/\.0$/,'')}
